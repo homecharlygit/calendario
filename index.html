@@ -161,6 +161,63 @@
     transform:translateY(24px); opacity:0;
   }
   .overlay.open .sheet{ transform:translateY(0); opacity:1; }
+
+  /* Hero clickable affordance */
+  .hero{ cursor:pointer; }
+  .hero-hint{
+    display:flex; align-items:center; gap:4px; margin-top:14px;
+    font-size:12.5px; font-weight:700; color:var(--m3-on-primary-container); opacity:0.85;
+  }
+  .hero-hint .material-symbols-rounded{ font-size:16px; }
+
+  /* Day tab suspend toggle */
+  .day-tab{ position:relative; padding-right:34px; }
+  .tab-suspend-btn{
+    position:absolute; right:5px; top:50%; transform:translateY(-50%);
+    width:22px; height:22px; border-radius:50%; border:none; background:rgba(0,0,0,0.08);
+    color:inherit; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    transition:background-color .15s ease, color .15s ease;
+  }
+  .tab-suspend-btn .material-symbols-rounded{ font-size:14px; }
+  .day-tab.is-suspended .tab-suspend-btn{ background:var(--m3-error); color:#fff; }
+  .day-tab.is-suspended{ opacity:0.6; }
+
+  /* Suspended banner in class list */
+  .suspend-banner{
+    display:flex; align-items:center; gap:12px; background:var(--m3-surface-container-high);
+    border:1.5px dashed var(--m3-error); border-radius:18px; padding:14px 16px; margin-bottom:12px;
+  }
+  .suspend-banner .material-symbols-rounded{ font-size:26px; color:var(--m3-error); flex-shrink:0; }
+  .suspend-banner .txt{ flex:1; }
+  .suspend-banner .txt b{ display:block; font-size:14px; color:var(--m3-on-surface); }
+  .suspend-banner .txt span{ font-size:12.5px; color:var(--m3-on-surface-variant); }
+  .suspend-banner button{
+    background:transparent; border:1.5px solid var(--m3-outline-variant); color:var(--m3-on-surface-variant);
+    font-weight:700; font-size:12px; padding:7px 12px; border-radius:100px; cursor:pointer; flex-shrink:0; font-family:inherit;
+  }
+
+  /* Stats sheet */
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+  .stat-box{ background:var(--m3-surface-container); border-radius:16px; padding:12px 14px; }
+  .stat-box .v{ font-size:22px; font-weight:800; color:var(--m3-primary); line-height:1.1; }
+  .stat-box .l{ font-size:11.5px; font-weight:600; color:var(--m3-on-surface-variant); margin-top:2px; }
+  .event-row{ display:flex; align-items:center; gap:12px; padding:10px 2px; border-bottom:1px solid var(--m3-surface-container-high); }
+  .event-row:last-child{ border-bottom:none; }
+  .event-icon{ width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .event-icon.cte{ background:var(--m3-secondary-container); color:var(--m3-on-secondary-container); }
+  .event-icon.suspension{ background:#FFDAD6; color:#93000A; }
+  .event-icon.receso{ background:var(--m3-tertiary-container); color:#3E0021; }
+  .event-icon.user{ background:#FFDAD6; color:#93000A; }
+  .event-row .info{ flex:1; min-width:0; }
+  .event-row .info .name{ font-size:13.5px; font-weight:700; color:var(--m3-on-surface); }
+  .event-row .info .date{ font-size:12px; color:var(--m3-on-surface-variant); }
+  .event-row .rm{ background:none; border:none; color:var(--m3-on-surface-variant); cursor:pointer; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .stats-note{ font-size:12px; color:var(--m3-on-surface-variant); margin-top:14px; line-height:1.5; }
+  .official-link{
+    display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px;
+    background:var(--m3-secondary-container); color:var(--m3-on-secondary-container);
+    font-weight:700; font-size:13.5px; padding:13px; border-radius:100px; text-decoration:none;
+  }
   .sheet-handle{ width:32px; height:4px; background:var(--m3-outline-variant); border-radius:99px; margin:0 auto 18px; }
   .sheet h3{ font-size:21px; font-weight:700; margin:0 0 18px; letter-spacing:-0.01em; }
   .sheet h4{ font-size:13px; font-weight:700; color:var(--m3-on-surface-variant); margin:22px 0 10px; }
@@ -224,7 +281,7 @@
     </button>
   </div>
 
-  <div class="hero">
+  <div class="hero" id="heroCard" onclick="openStatsSheet()">
     <div class="hero-blob"></div>
     <div class="hero-inner">
       <p class="hero-label">Semana actual</p>
@@ -240,6 +297,7 @@
         <span id="dateStart">—</span>
         <span id="dateEnd">—</span>
       </div>
+      <div class="hero-hint"><span class="material-symbols-rounded">bar_chart</span>Ver estadísticas y días sin clases</div>
     </div>
   </div>
 
@@ -348,11 +406,106 @@
   </div>
 </div>
 
+<div class="overlay" id="statsOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <h3>Estadísticas del ciclo</h3>
+
+    <div class="stat-grid" id="statGrid"></div>
+
+    <h4>Próximos días sin clases</h4>
+    <div id="upcomingEvents"></div>
+
+    <h4>Tus suspensiones marcadas</h4>
+    <div id="userSuspensions"></div>
+
+    <a class="official-link" id="officialLink" href="https://educacionbasica.sep.gob.mx/publica-sep-calendario-escolar-2026-2027-para-educacion-basica-y-normal/" target="_blank" rel="noopener">
+      <span class="material-symbols-rounded">open_in_new</span>Ver calendario oficial SEP
+    </a>
+    <p class="stats-note">Los Consejos Técnicos, recesos y suspensiones se basan en el calendario oficial SEP 2026-2027. Confírmalos con tu escuela, ya que puede haber ajustes locales.</p>
+
+    <div class="sheet-actions" style="margin-top:16px;">
+      <button class="btn-primary" id="statsCloseBtn" style="flex:none; width:100%;">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const DAYS = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const WEEKDAY_FULL = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const MONTHS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const DAY_ROLE = { "Lunes":"primary","Martes":"tertiary","Miércoles":"secondary","Jueves":"green","Viernes":"amber","Sábado":"neutral","Domingo":"neutral" };
+
+// Calendario oficial SEP ciclo 2026-2027 (fechas aproximadas, confirmar con la escuela)
+const RECESOS = [
+  { start:"2026-12-21", end:"2027-01-06", label:"Vacaciones de invierno" },
+  { start:"2027-03-22", end:"2027-04-04", label:"Vacaciones de primavera" }
+];
+const CTE_DATES = ["2026-09-25","2026-10-30","2026-11-27","2027-01-29","2027-02-26","2027-03-26","2027-05-28","2027-06-25"];
+const SUSPENSION_DATES = [
+  { date:"2026-09-16", label:"Independencia de México" },
+  { date:"2026-11-02", label:"Día de Muertos" },
+  { date:"2026-11-16", label:"Revolución Mexicana" },
+  { date:"2027-02-01", label:"Aniversario de la Constitución" },
+  { date:"2027-03-15", label:"Natalicio de Benito Juárez" },
+  { date:"2027-05-05", label:"Suspensión de labores" }
+];
+
+function toISO(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+
+function buildOfficialSet(){
+  const set = new Set();
+  RECESOS.forEach(r => {
+    let d = parseLocalDate(r.start); const end = parseLocalDate(r.end);
+    while(d <= end){ set.add(toISO(d)); d.setDate(d.getDate()+1); }
+  });
+  CTE_DATES.forEach(dt => set.add(dt));
+  SUSPENSION_DATES.forEach(s => set.add(s.date));
+  return set;
+}
+function buildOfficialEvents(){
+  return [
+    ...RECESOS.map(r => ({ date:r.start, type:"receso", label:r.label })),
+    ...CTE_DATES.map(dt => ({ date:dt, type:"cte", label:"Consejo Técnico Escolar" })),
+    ...SUSPENSION_DATES.map(s => ({ date:s.date, type:"suspension", label:s.label }))
+  ].sort((a,b) => a.date.localeCompare(b.date));
+}
+const OFFICIAL_SET = buildOfficialSet();
+const OFFICIAL_EVENTS = buildOfficialEvents();
+
+function startOfWeekMonday(d){
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  monday.setHours(0,0,0,0);
+  return monday;
+}
+function dateForWeekdayThisWeek(weekdayName){
+  const idx = WEEKDAY_FULL.indexOf(weekdayName);
+  const monday = startOfWeekMonday(new Date());
+  const d = new Date(monday);
+  d.setDate(monday.getDate() + idx);
+  return d;
+}
+function officialEventFor(iso){ return OFFICIAL_EVENTS.find(e => e.date === iso) || null; }
+function isSuspended(iso){ return OFFICIAL_SET.has(iso) || suspensions.includes(iso); }
+function toggleUserSuspension(iso){
+  if(suspensions.includes(iso)){ suspensions = suspensions.filter(x => x !== iso); }
+  else { suspensions.push(iso); }
+  saveSuspensions();
+}
+function countClassDaysBetween(startDate, endDate){
+  let count = 0;
+  let d = new Date(startDate); d.setHours(0,0,0,0);
+  const end = new Date(endDate); end.setHours(0,0,0,0);
+  while(d <= end){
+    const dow = d.getDay();
+    if(dow !== 0 && dow !== 6 && !isSuspended(toISO(d))) count++;
+    d.setDate(d.getDate()+1);
+  }
+  return count;
+}
 
 const THEMES = {
   violeta:{ light:{main:"#6750A4",onMain:"#FFFFFF",container:"#EADDFF",on:"#21005D"}, dark:{main:"#D0BCFF",onMain:"#381E72",container:"#4F378B",on:"#EADDFF"} },
@@ -434,6 +587,7 @@ const store = {
 let settings = { startDate:"2026-08-31", totalWeeks:44 };
 let schedule = [];
 let prefs = { ...DEFAULT_PREFS };
+let suspensions = [];
 let selectedDay = null;
 let editingId = null;
 
@@ -450,6 +604,7 @@ function fmtTime(hhmm){
 async function loadData(){
   try{ const s = await store.get('settings'); if(s) settings = JSON.parse(s); }catch(e){}
   try{ const p = await store.get('prefs'); if(p) prefs = { ...DEFAULT_PREFS, ...JSON.parse(p) }; }catch(e){}
+  try{ const su = await store.get('suspensions'); if(su) suspensions = JSON.parse(su); }catch(e){}
   try{
     const sc = await store.get('schedule');
     if(sc){ schedule = JSON.parse(sc); }
@@ -459,6 +614,7 @@ async function loadData(){
 async function saveSettings(){ await store.set('settings', JSON.stringify(settings)); }
 async function savePrefs(){ await store.set('prefs', JSON.stringify(prefs)); }
 async function saveSchedule(){ await store.set('schedule', JSON.stringify(schedule)); }
+async function saveSuspensions(){ await store.set('suspensions', JSON.stringify(suspensions)); render(); }
 
 function effectiveMode(){
   if(prefs.themeMode === "auto"){
@@ -610,13 +766,23 @@ function renderDayTabs(todayName, accents){
   container.innerHTML = '';
   visibleDays().forEach((day, i) => {
     const acc = accents[day];
+    const iso = toISO(dateForWeekdayThisWeek(day));
+    const suspended = isSuspended(iso);
     const btn = document.createElement('button');
-    btn.className = 'day-tab' + (day===todayName?' is-today':'') + (day===selectedDay?' is-selected':'') + (dayHasClasses(day)?' has-classes':'');
+    btn.className = 'day-tab' + (day===todayName?' is-today':'') + (day===selectedDay?' is-selected':'') + (dayHasClasses(day)?' has-classes':'') + (suspended?' is-suspended':'');
     btn.style.setProperty('--chip-container', acc.container);
     btn.style.setProperty('--chip-on', acc.on);
     btn.style.animationDelay = (i * 30) + 'ms';
-    btn.innerHTML = day.slice(0,3) + '<span class="dot"></span>';
+    btn.innerHTML = day.slice(0,3) + '<span class="dot"></span>' +
+      `<span class="tab-suspend-btn" title="Marcar ${day} (${fmtDate(dateForWeekdayThisWeek(day))}) como suspendido" data-iso="${iso}">
+        <span class="material-symbols-rounded">block</span>
+      </span>`;
     btn.onclick = () => { selectedDay = day; render(); };
+    btn.querySelector('.tab-suspend-btn').onclick = (e) => {
+      e.stopPropagation();
+      toggleUserSuspension(iso);
+      render();
+    };
     container.appendChild(btn);
   });
 }
@@ -629,13 +795,30 @@ function renderList(todayName, accents){
   const items = schedule.filter(c => c.day === selectedDay).sort((a,b)=> a.start.localeCompare(b.start));
   title.textContent = selectedDay === todayName ? 'Hoy' : selectedDay;
   count.textContent = items.length ? `${items.length} clase${items.length===1?'':'s'}` : '';
+
+  const dayIso = toISO(dateForWeekdayThisWeek(selectedDay));
+  if(isSuspended(dayIso)){
+    const isUser = suspensions.includes(dayIso);
+    const official = officialEventFor(dayIso);
+    const label = official ? official.label : 'Marcado manualmente';
+    const banner = document.createElement('div');
+    banner.className = 'suspend-banner';
+    banner.innerHTML = `
+      <span class="material-symbols-rounded">event_busy</span>
+      <div class="txt"><b>Sin clases este día</b><span>${escapeHtml(label)} · ${fmtDate(dateForWeekdayThisWeek(selectedDay))}</span></div>
+      ${isUser ? `<button onclick="toggleUserSuspension('${dayIso}'); render();">Quitar</button>` : ''}
+    `;
+    list.appendChild(banner);
+  }
+
   if(items.length === 0){
-    list.innerHTML = `
-      <div class="empty-state">
-        <span class="material-symbols-rounded">edit_calendar</span>
-        <p>No tienes materias registradas para el ${selectedDay.toLowerCase()}.</p>
-        <button class="btn-tonal" onclick="openAddSheet('${selectedDay}')">Agregar materia</button>
-      </div>`;
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = `
+      <span class="material-symbols-rounded">edit_calendar</span>
+      <p>No tienes materias registradas para el ${selectedDay.toLowerCase()}.</p>
+      <button class="btn-tonal" onclick="openAddSheet('${selectedDay}')">Agregar materia</button>`;
+    list.appendChild(empty);
     return;
   }
   items.forEach((c, i) => {
@@ -788,6 +971,58 @@ document.getElementById('settingsSaveBtn').onclick = async () => {
   settingsOverlay.classList.remove('open');
   render();
 };
+
+// ---- Stats sheet ----
+const statsOverlay = document.getElementById('statsOverlay');
+function openStatsSheet(){ renderStats(); statsOverlay.classList.add('open'); }
+document.getElementById('statsCloseBtn').onclick = () => statsOverlay.classList.remove('open');
+statsOverlay.addEventListener('click', (e) => { if(e.target === statsOverlay) statsOverlay.classList.remove('open'); });
+
+function eventIconFor(type){
+  if(type === 'cte') return 'groups';
+  if(type === 'receso') return 'beach_access';
+  if(type === 'user') return 'block';
+  return 'event_busy';
+}
+
+function renderStats(){
+  const info = computeWeekInfo();
+  const today = info.today;
+  const end = info.end;
+  const calendarDaysLeft = Math.max(0, Math.ceil((end - today) / 86400000));
+  const classDaysLeft = info.status === 'finished' ? 0 : countClassDaysBetween(today, end);
+
+  document.getElementById('statGrid').innerHTML = `
+    <div class="stat-box"><div class="v">${calendarDaysLeft}</div><div class="l">Días de calendario restantes</div></div>
+    <div class="stat-box"><div class="v">${classDaysLeft}</div><div class="l">Días de clase reales restantes</div></div>
+    <div class="stat-box"><div class="v">${info.remaining}</div><div class="l">Semanas restantes</div></div>
+    <div class="stat-box"><div class="v">${Math.round(info.percent)}%</div><div class="l">Avance del ciclo</div></div>
+  `;
+
+  const todayIso = toISO(today);
+  const merged = [
+    ...OFFICIAL_EVENTS.map(e => ({ ...e, source:'official' })),
+    ...suspensions.filter(iso => !OFFICIAL_SET.has(iso)).map(iso => ({ date:iso, type:'user', label:'Suspensión marcada por ti', source:'user' }))
+  ].filter(e => e.date >= todayIso).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 8);
+
+  const upcomingEl = document.getElementById('upcomingEvents');
+  upcomingEl.innerHTML = merged.length ? merged.map(e => `
+    <div class="event-row">
+      <div class="event-icon ${e.type}"><span class="material-symbols-rounded">${eventIconFor(e.type)}</span></div>
+      <div class="info"><div class="name">${escapeHtml(e.label)}</div><div class="date">${fmtDate(parseLocalDate(e.date))}</div></div>
+    </div>
+  `).join('') : `<p class="stats-note" style="margin-top:4px;">No hay eventos próximos registrados.</p>`;
+
+  const userList = suspensions.slice().sort();
+  const userEl = document.getElementById('userSuspensions');
+  userEl.innerHTML = userList.length ? userList.map(iso => `
+    <div class="event-row">
+      <div class="event-icon user"><span class="material-symbols-rounded">block</span></div>
+      <div class="info"><div class="name">Día marcado como suspendido</div><div class="date">${fmtDate(parseLocalDate(iso))}</div></div>
+      <button class="rm" onclick="toggleUserSuspension('${iso}'); renderStats();" aria-label="Quitar"><span class="material-symbols-rounded">close</span></button>
+    </div>
+  `).join('') : `<p class="stats-note" style="margin-top:4px;">Aún no has marcado ningún día. Usa el ícono ⊘ en las pestañas de los días.</p>`;
+}
 
 if(window.matchMedia){
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if(prefs.themeMode === 'auto') render(); });
