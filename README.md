@@ -1,1 +1,2 @@
-Calendario Escolar simple con estilo de diseño Material 3 Expressive, sincronizado con el calendario escolar Mexicano.
+## Ciclo Escolar
+App para llevar el horario de clases y ver cuánto queda del ciclo escolar. Está empacada como app de Android y usa el estilo Material 3 Expressive.
