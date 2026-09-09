@@ -31,7 +31,14 @@
     --m3-outline:#79747E;
     --m3-outline-variant:#CAC4D0;
   }
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; tap-highlight-color:transparent;}
+  html{ -webkit-tap-highlight-color:transparent; }
+  button, a, input, select, .day-tab, .class-card, .swatch, .icon-btn, .icon-btn-tonal, .fab, .switch{
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+  }
+  button:focus, a:focus, .day-tab:focus, .icon-btn:focus, .icon-btn-tonal:focus, .swatch:focus, .switch:focus{ outline:none; }
   html,body{margin:0;padding:0;}
   body{
     background:var(--m3-surface); color:var(--m3-on-surface);
@@ -222,48 +229,30 @@
   }
 
   /* Extra blur mode (only active when body.extra-blur is set; default look is untouched) */
+  /* Backdrop-filter is expensive per-layer, so it's kept ONLY on the few large,
+     non-repeated surfaces (hero, sheet, overlay backdrop). Repeated small elements
+     (cards, tabs, chips, buttons) get a cheap translucent tint instead — same "glassy"
+     feel without stacking dozens of blur layers, which is what caused the lag. */
   body.extra-blur .hero{
-    background:linear-gradient(155deg, color-mix(in srgb, var(--m3-primary-container) 50%, transparent) 0%, color-mix(in srgb, var(--m3-surface-container-high) 50%, transparent) 65%);
-    backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px);
+    background:linear-gradient(155deg, color-mix(in srgb, var(--m3-primary-container) 55%, transparent) 0%, color-mix(in srgb, var(--m3-surface-container-high) 55%, transparent) 65%);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   }
   body.extra-blur .sheet{
-    background:color-mix(in srgb, var(--m3-surface-container-low) 75%, transparent);
-    backdrop-filter:blur(34px); -webkit-backdrop-filter:blur(34px);
+    background:color-mix(in srgb, var(--m3-surface-container-low) 80%, transparent);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
   }
-  body.extra-blur .overlay.open{ backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px); }
-  body.extra-blur .class-card{
-    background:color-mix(in srgb, var(--m3-surface-container-low) 72%, transparent);
-    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-  }
-  body.extra-blur .empty-state{
-    background:color-mix(in srgb, var(--m3-surface-container-low) 65%, transparent);
-    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-  }
-  body.extra-blur .fab{
-    background:color-mix(in srgb, var(--m3-primary) 78%, transparent);
-    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-  }
-  body.extra-blur .icon-btn-tonal{
-    background:color-mix(in srgb, var(--m3-secondary-container) 70%, transparent);
-    backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-  }
-  body.extra-blur .btn-tonal, body.extra-blur .btn-primary{
-    background:color-mix(in srgb, var(--m3-primary) 82%, transparent);
-    backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
-  }
-  body.extra-blur .btn-tonal{ background:color-mix(in srgb, var(--m3-secondary-container) 75%, transparent); }
-  body.extra-blur .day-tab{
-    background:color-mix(in srgb, var(--m3-surface-container) 65%, transparent);
-    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-  }
-  body.extra-blur .day-tab.is-selected{ background:color-mix(in srgb, var(--chip-container) 80%, transparent); }
-  body.extra-blur .segmented{
-    background:color-mix(in srgb, var(--m3-surface-container-high) 65%, transparent);
-    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-  }
-  body.extra-blur .stat-box, body.extra-blur .event-row{
-    background:color-mix(in srgb, var(--m3-surface-container) 70%, transparent);
-  }
+  body.extra-blur .overlay.open{ backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+
+  body.extra-blur .class-card{ background:color-mix(in srgb, var(--m3-surface-container-low) 78%, transparent); }
+  body.extra-blur .empty-state{ background:color-mix(in srgb, var(--m3-surface-container-low) 70%, transparent); }
+  body.extra-blur .fab{ background:color-mix(in srgb, var(--m3-primary) 85%, transparent); }
+  body.extra-blur .icon-btn-tonal{ background:color-mix(in srgb, var(--m3-secondary-container) 78%, transparent); }
+  body.extra-blur .btn-primary{ background:color-mix(in srgb, var(--m3-primary) 85%, transparent); }
+  body.extra-blur .btn-tonal{ background:color-mix(in srgb, var(--m3-secondary-container) 80%, transparent); }
+  body.extra-blur .day-tab{ background:color-mix(in srgb, var(--m3-surface-container) 72%, transparent); }
+  body.extra-blur .day-tab.is-selected{ background:color-mix(in srgb, var(--chip-container) 85%, transparent); }
+  body.extra-blur .segmented{ background:color-mix(in srgb, var(--m3-surface-container-high) 72%, transparent); }
+  body.extra-blur .stat-box, body.extra-blur .event-row{ background:color-mix(in srgb, var(--m3-surface-container) 75%, transparent); }
 
   /* Scan / OCR UI */
   .scan-progress-box{
@@ -653,51 +642,6 @@ const SURFACE = {
   dark: { surface:"#141218", containerLowest:"#0F0D13", containerLow:"#1D1B20", container:"#211F26", containerHigh:"#2B2930", containerHighest:"#36343B", onSurface:"#E6E0E9", onSurfaceVariant:"#CAC4D0", outline:"#938F99", outlineVariant:"#49454F", error:"#FFB4AB" }
 };
 
-const DEFAULT_SCHEDULE = [
-  {day:"Lunes", start:"07:00", end:"07:50", subject:"Historia", room:""},
-  {day:"Lunes", start:"07:50", end:"08:40", subject:"Español", room:""},
-  {day:"Lunes", start:"08:40", end:"09:30", subject:"Español", room:""},
-  {day:"Lunes", start:"09:50", end:"10:40", subject:"FCE", room:""},
-  {day:"Lunes", start:"10:40", end:"11:30", subject:"Impact AI", room:""},
-  {day:"Lunes", start:"11:30", end:"12:20", subject:"FCE", room:""},
-  {day:"Lunes", start:"12:30", end:"13:20", subject:"Inglés", room:""},
-  {day:"Lunes", start:"13:20", end:"14:10", subject:"Inglés", room:""},
-  {day:"Martes", start:"07:00", end:"07:50", subject:"Historia", room:""},
-  {day:"Martes", start:"07:50", end:"08:40", subject:"Español", room:""},
-  {day:"Martes", start:"08:40", end:"09:30", subject:"Español", room:""},
-  {day:"Martes", start:"09:50", end:"10:40", subject:"Inglés", room:""},
-  {day:"Martes", start:"10:40", end:"11:30", subject:"Inglés", room:""},
-  {day:"Martes", start:"11:30", end:"12:20", subject:"Historia", room:""},
-  {day:"Martes", start:"12:30", end:"13:20", subject:"Robótica", room:""},
-  {day:"Martes", start:"13:20", end:"14:10", subject:"Vida Saludable", room:""},
-  {day:"Martes", start:"14:10", end:"14:50", subject:"Vida Saludable", room:""},
-  {day:"Miércoles", start:"07:00", end:"07:50", subject:"Ciencias Química", room:""},
-  {day:"Miércoles", start:"07:50", end:"08:40", subject:"Ciencias Química", room:""},
-  {day:"Miércoles", start:"08:40", end:"09:30", subject:"Español", room:""},
-  {day:"Miércoles", start:"09:50", end:"10:40", subject:"Matemáticas", room:""},
-  {day:"Miércoles", start:"10:40", end:"11:30", subject:"Educación Financiera", room:""},
-  {day:"Miércoles", start:"11:30", end:"12:20", subject:"Artes", room:""},
-  {day:"Miércoles", start:"12:30", end:"13:20", subject:"Artes", room:""},
-  {day:"Miércoles", start:"13:20", end:"14:10", subject:"Robótica", room:""},
-  {day:"Jueves", start:"07:00", end:"07:50", subject:"Ciencias Química", room:""},
-  {day:"Jueves", start:"07:50", end:"08:40", subject:"Ciencias Química", room:""},
-  {day:"Jueves", start:"08:40", end:"09:30", subject:"Matemáticas", room:""},
-  {day:"Jueves", start:"09:50", end:"10:40", subject:"Matemáticas", room:""},
-  {day:"Jueves", start:"10:40", end:"11:30", subject:"Historia", room:""},
-  {day:"Jueves", start:"11:30", end:"12:20", subject:"Artes", room:""},
-  {day:"Jueves", start:"12:30", end:"13:20", subject:"Inglés", room:""},
-  {day:"Jueves", start:"13:20", end:"14:10", subject:"Robótica", room:""},
-  {day:"Viernes", start:"07:00", end:"07:50", subject:"Ciencias Química", room:""},
-  {day:"Viernes", start:"07:50", end:"08:40", subject:"Ciencias Química", room:""},
-  {day:"Viernes", start:"08:40", end:"09:30", subject:"Matemáticas", room:""},
-  {day:"Viernes", start:"09:50", end:"10:40", subject:"Matemáticas", room:""},
-  {day:"Viernes", start:"10:40", end:"11:30", subject:"Educación Física", room:""},
-  {day:"Viernes", start:"11:30", end:"12:20", subject:"Educación Física", room:""},
-  {day:"Viernes", start:"12:30", end:"13:20", subject:"Inglés", room:""},
-  {day:"Viernes", start:"13:20", end:"14:10", subject:"Francés", room:""},
-  {day:"Viernes", start:"14:10", end:"14:50", subject:"Francés", room:""}
-].map((c,i) => ({ id: 'seed'+i, ...c }));
-
 const DEFAULT_PREFS = { name:"", themeMode:"auto", accent:"violeta", timeFormat:"24", showWeekend:false, extraBlur:false, devMode:false };
 
 const store = {
@@ -735,8 +679,8 @@ async function loadData(){
   try{
     const sc = await store.get('schedule');
     if(sc){ schedule = JSON.parse(sc); }
-    else { schedule = DEFAULT_SCHEDULE; await store.set('schedule', JSON.stringify(schedule)); }
-  }catch(e){ schedule = DEFAULT_SCHEDULE; }
+    else { schedule = []; await store.set('schedule', JSON.stringify(schedule)); }
+  }catch(e){ schedule = []; }
 }
 async function saveSettings(){ await store.set('settings', JSON.stringify(settings)); }
 async function savePrefs(){ await store.set('prefs', JSON.stringify(prefs)); }
