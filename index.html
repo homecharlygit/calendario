@@ -489,12 +489,12 @@
     </div>
 
     <div class="switch-row" style="margin-top:6px;">
-      <span>Modo desarrollador</span>
+      <span>Opciones ocultas</span>
       <button class="switch" id="devModeSwitch"><span class="thumb"></span></button>
     </div>
 
     <div id="devPanel" style="display:none;">
-      <h4>Zona de desarrollador</h4>
+      <h4>Opciones ocultas</h4>
       <div class="sheet-actions" style="flex-direction:column; gap:8px;">
         <button class="btn-ghost" id="devClearScheduleBtn" style="width:100%; color:var(--m3-error); border-color:var(--m3-error);">Borrar todas las materias</button>
         <button class="btn-ghost" id="devClearSuspensionsBtn" style="width:100%; color:var(--m3-error); border-color:var(--m3-error);">Borrar todas las suspensiones</button>
@@ -1095,7 +1095,7 @@ document.getElementById('weekendSwitch').onclick = () => { prefs.showWeekend = !
 document.getElementById('blurSwitch').onclick = () => { prefs.extraBlur = !prefs.extraBlur; paintSettingsUI(); applyTheme(); };
 document.getElementById('devModeSwitch').onclick = async () => {
   if(!prefs.devMode){
-    if(!confirm('¿Activar el modo desarrollador? Vas a ver herramientas para borrar datos de forma permanente.')) return;
+    if(!confirm('¿Activar las opciones ocultas? Vas a ver herramientas para borrar datos de forma permanente.')) return;
     prefs.devMode = true;
   } else {
     prefs.devMode = false;
@@ -1207,6 +1207,7 @@ const uploadInput = document.getElementById('uploadInput');
 const scanProgressOverlay = document.getElementById('scanProgressOverlay');
 const scanReviewOverlay = document.getElementById('scanReviewOverlay');
 let scanDraft = [];
+let lastOcrRawText = '';
 let ocrWorker = null;
 let ocrProgressHandler = () => {};
 
@@ -1222,6 +1223,7 @@ async function getOcrWorker(){
     ocrWorker = await Tesseract.createWorker('spa', 1, {
       logger: (m) => ocrProgressHandler(m)
     });
+    await ocrWorker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
   }
   return ocrWorker;
 }
@@ -1264,10 +1266,12 @@ async function handleScanFile(file){
   try{
     const worker = await getOcrWorker();
     const { data } = await worker.recognize(file, {}, { blocks: true });
+    lastOcrRawText = (data.text || '').trim();
     const words = flattenWords(data.blocks).filter(w => w.text && w.text.trim().length);
     scanDraft = parseTimetableFromWords(words);
   }catch(e){
     console.error(e);
+    lastOcrRawText = '';
     scanDraft = [];
   }
   scanProgressOverlay.classList.remove('open');
@@ -1281,10 +1285,18 @@ function smartCase(word){
 }
 function toSubjectCase(text){ return text.split(/\s+/).filter(Boolean).map(smartCase).join(' '); }
 
-const HEADER_MAP = {
-  "HORA":"HORA", "LUNES":"Lunes", "MARTES":"Martes", "MIERCOLES":"Miércoles",
-  "JUEVES":"Jueves", "VIERNES":"Viernes", "SABADO":"Sábado", "DOMINGO":"Domingo"
-};
+const HEADER_PREFIXES = [
+  ["LUN","Lunes"], ["MAR","Martes"], ["MIE","Miércoles"], ["JUE","Jueves"],
+  ["VIE","Viernes"], ["SAB","Sábado"], ["DOM","Domingo"], ["HOR","HORA"]
+];
+function matchHeader(text){
+  const norm = stripAccents(text.toUpperCase()).replace(/[^A-Z]/g, '');
+  if(norm.length < 3) return null;
+  for(const [prefix, name] of HEADER_PREFIXES){
+    if(norm.startsWith(prefix)) return name;
+  }
+  return null;
+}
 
 function parseTimetableFromWords(words){
   if(!words.length) return [];
@@ -1295,11 +1307,11 @@ function parseTimetableFromWords(words){
     w.h = w.bbox.y1 - w.bbox.y0;
   });
 
-  // 1. find header words (day names / HORA)
+  // 1. find header words (day names / HORA) — tolerant to minor OCR typos via prefix match
   const headerWords = [];
   words.forEach(w => {
-    const norm = stripAccents(w.text.toUpperCase()).replace(/[^A-Z]/g, '');
-    if(HEADER_MAP[norm]) headerWords.push({ name: HEADER_MAP[norm], cx: w.cx, cy: w.cy });
+    const name = matchHeader(w.text);
+    if(name) headerWords.push({ name, cx: w.cx, cy: w.cy });
   });
   if(headerWords.length < 2) return [];
 
@@ -1370,7 +1382,12 @@ function openScanReview(){
 function renderScanReview(){
   const list = document.getElementById('scanReviewList');
   if(!scanDraft.length){
-    list.innerHTML = `<div class="scan-empty">No pude detectar tu horario automáticamente.<br>Intenta con una foto más clara, tomada de frente, o agrega tus materias manualmente.</div>`;
+    const rawBlock = lastOcrRawText
+      ? `<div style="text-align:left; background:var(--m3-surface-container); border-radius:12px; padding:10px 12px; margin-top:14px; max-height:160px; overflow-y:auto; font-size:12px; color:var(--m3-on-surface-variant); white-space:pre-wrap;">${escapeHtml(lastOcrRawText)}</div>`
+      : '';
+    list.innerHTML = `<div class="scan-empty">No pude detectar tu horario automáticamente.<br>Intenta con una foto más clara, tomada de frente, o agrega tus materias manualmente.
+      ${rawBlock ? '<br><br><b>Esto fue lo que sí logré leer</b> (revisa si tus encabezados de día salieron bien escritos):' + rawBlock : ''}
+    </div>`;
     return;
   }
   list.innerHTML = scanDraft.map((c, i) => `
