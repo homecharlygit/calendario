@@ -488,6 +488,22 @@
       <input type="number" id="sWeeks" min="1" max="60">
     </div>
 
+    <div class="switch-row" style="margin-top:6px;">
+      <span>Modo desarrollador</span>
+      <button class="switch" id="devModeSwitch"><span class="thumb"></span></button>
+    </div>
+
+    <div id="devPanel" style="display:none;">
+      <h4>Zona de desarrollador</h4>
+      <div class="sheet-actions" style="flex-direction:column; gap:8px;">
+        <button class="btn-ghost" id="devClearScheduleBtn" style="width:100%; color:var(--m3-error); border-color:var(--m3-error);">Borrar todas las materias</button>
+        <button class="btn-ghost" id="devClearSuspensionsBtn" style="width:100%; color:var(--m3-error); border-color:var(--m3-error);">Borrar todas las suspensiones</button>
+        <button class="btn-ghost" id="devResetPrefsBtn" style="width:100%; color:var(--m3-error); border-color:var(--m3-error);">Restablecer apariencia y preferencias</button>
+        <button class="btn-ghost" id="devFactoryResetBtn" style="width:100%; color:var(--m3-error); border-color:var(--m3-error);">Borrar TODO (horario, ciclo, ajustes)</button>
+      </div>
+      <p class="stats-note">Estas acciones no se pueden deshacer.</p>
+    </div>
+
     <div class="sheet-actions">
       <button class="btn-ghost" id="settingsCancelBtn">Cerrar</button>
       <button class="btn-primary" id="settingsSaveBtn">Guardar</button>
@@ -682,7 +698,7 @@ const DEFAULT_SCHEDULE = [
   {day:"Viernes", start:"14:10", end:"14:50", subject:"Francés", room:""}
 ].map((c,i) => ({ id: 'seed'+i, ...c }));
 
-const DEFAULT_PREFS = { name:"", themeMode:"auto", accent:"violeta", timeFormat:"24", showWeekend:false, extraBlur:false };
+const DEFAULT_PREFS = { name:"", themeMode:"auto", accent:"violeta", timeFormat:"24", showWeekend:false, extraBlur:false, devMode:false };
 
 const store = {
   async get(key){
@@ -1029,6 +1045,9 @@ function paintSettingsUI(){
   sw.classList.toggle('on', !!prefs.showWeekend);
   const bsw = document.getElementById('blurSwitch');
   bsw.classList.toggle('on', !!prefs.extraBlur);
+  const dsw = document.getElementById('devModeSwitch');
+  dsw.classList.toggle('on', !!prefs.devMode);
+  document.getElementById('devPanel').style.display = prefs.devMode ? 'block' : 'none';
 
   const wrap = document.getElementById('accentSwatches');
   wrap.innerHTML = '';
@@ -1074,6 +1093,49 @@ document.getElementById('timeSeg').addEventListener('click', (e) => {
 });
 document.getElementById('weekendSwitch').onclick = () => { prefs.showWeekend = !prefs.showWeekend; paintSettingsUI(); };
 document.getElementById('blurSwitch').onclick = () => { prefs.extraBlur = !prefs.extraBlur; paintSettingsUI(); applyTheme(); };
+document.getElementById('devModeSwitch').onclick = async () => {
+  if(!prefs.devMode){
+    if(!confirm('¿Activar el modo desarrollador? Vas a ver herramientas para borrar datos de forma permanente.')) return;
+    prefs.devMode = true;
+  } else {
+    prefs.devMode = false;
+  }
+  await savePrefs();
+  paintSettingsUI();
+};
+
+document.getElementById('devClearScheduleBtn').onclick = async () => {
+  if(!confirm('¿Borrar TODAS las materias del horario? Esto no se puede deshacer.')) return;
+  schedule = [];
+  await saveSchedule();
+  render();
+};
+document.getElementById('devClearSuspensionsBtn').onclick = async () => {
+  if(!confirm('¿Borrar todas las suspensiones marcadas?')) return;
+  suspensions = [];
+  await saveSuspensions();
+};
+document.getElementById('devResetPrefsBtn').onclick = async () => {
+  if(!confirm('¿Restablecer nombre, tema, color, formato de hora y demás preferencias?')) return;
+  prefs = { ...DEFAULT_PREFS, devMode: true };
+  await savePrefs();
+  paintSettingsUI();
+  applyTheme();
+  render();
+};
+document.getElementById('devFactoryResetBtn').onclick = async () => {
+  if(!confirm('¿Borrar TODO? Esto elimina tu horario, ciclo escolar, suspensiones y preferencias. No se puede deshacer.')) return;
+  schedule = [];
+  settings = { startDate:"2026-08-31", totalWeeks:44 };
+  suspensions = [];
+  prefs = { ...DEFAULT_PREFS };
+  await saveSchedule();
+  await saveSettings();
+  await saveSuspensions();
+  await savePrefs();
+  settingsOverlay.classList.remove('open');
+  render();
+};
 
 document.getElementById('settingsSaveBtn').onclick = async () => {
   const sd = document.getElementById('sStart').value;
@@ -1145,6 +1207,8 @@ const uploadInput = document.getElementById('uploadInput');
 const scanProgressOverlay = document.getElementById('scanProgressOverlay');
 const scanReviewOverlay = document.getElementById('scanReviewOverlay');
 let scanDraft = [];
+let ocrWorker = null;
+let ocrProgressHandler = () => {};
 
 function ensureTesseractReady(){
   if(typeof Tesseract === 'undefined'){
@@ -1153,6 +1217,26 @@ function ensureTesseractReady(){
   }
   return true;
 }
+async function getOcrWorker(){
+  if(!ocrWorker){
+    ocrWorker = await Tesseract.createWorker('spa', 1, {
+      logger: (m) => ocrProgressHandler(m)
+    });
+  }
+  return ocrWorker;
+}
+function flattenWords(blocks){
+  const words = [];
+  (blocks || []).forEach(block => {
+    (block.paragraphs || []).forEach(p => {
+      (p.lines || []).forEach(line => {
+        (line.words || []).forEach(w => words.push(w));
+      });
+    });
+  });
+  return words;
+}
+
 document.getElementById('scanBtn').onclick = () => {
   if(!ensureTesseractReady()) return;
   scanInput.value = '';
@@ -1171,16 +1255,16 @@ async function handleScanFile(file){
   if(!file) return;
   scanProgressOverlay.classList.add('open');
   document.getElementById('scanProgressText').textContent = 'Leyendo tu horario…';
-  document.getElementById('scanProgressSub').textContent = 'Esto puede tardar unos segundos';
+  document.getElementById('scanProgressSub').textContent = 'Preparando el lector…';
+  ocrProgressHandler = (m) => {
+    if(m.status === 'recognizing text'){
+      document.getElementById('scanProgressSub').textContent = `Analizando… ${Math.round((m.progress||0)*100)}%`;
+    }
+  };
   try{
-    const { data } = await Tesseract.recognize(file, 'spa', {
-      logger: (m) => {
-        if(m.status === 'recognizing text'){
-          document.getElementById('scanProgressSub').textContent = `Analizando… ${Math.round((m.progress||0)*100)}%`;
-        }
-      }
-    });
-    const words = (data.words || []).filter(w => w.text && w.text.trim().length);
+    const worker = await getOcrWorker();
+    const { data } = await worker.recognize(file, {}, { blocks: true });
+    const words = flattenWords(data.blocks).filter(w => w.text && w.text.trim().length);
     scanDraft = parseTimetableFromWords(words);
   }catch(e){
     console.error(e);
